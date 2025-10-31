@@ -17,6 +17,39 @@ import warnings
 warnings.filterwarnings('ignore')
 
 # ==========================================================
+# FUNCIONES AUXILIARES GLOBALES
+# ==========================================================
+def generate_executive_report(metricas, features, df_processed):
+    """Genera un reporte ejecutivo en texto plano"""
+    report = f"""
+    REPORTE EJECUTIVO - ANÁLISIS DE TRÁFICO DGIPSE
+    Fecha de generación: {datetime.now().strftime('%d/%m/%Y %H:%M')}
+    ===================================================
+    
+    RESUMEN EJECUTIVO:
+    - Total de requests analizados: {metricas['Total de requests']:,}
+    - Usuarios únicos identificados: {metricas['Usuarios únicos']:,}
+    - Tráfico móvil: {metricas['% Móvil']:.1f}%
+    - Tasa de anomalías: {metricas['% Anomalías']:.2f}%
+    
+    PRINCIPALES HALLAZGOS:
+    1. Seguridad: {metricas['IPs sospechosas']} IPs marcadas como sospechosas
+    2. Dispositivos: {metricas['% Móvil']:.1f}% del tráfico desde móviles
+    3. Geografía: Tráfico predominante desde {metricas['País predominante']}
+    4. Navegadores: {metricas['Navegador principal']} es el más utilizado
+    
+    RECOMENDACIONES PRIORITARIAS:
+    1. Implementar medidas de seguridad para IPs sospechosas
+    2. Optimizar experiencia mobile
+    3. Monitoreo continuo de patrones anómalos
+    4. Escalado de recursos en horarios pico
+    
+    ---
+    Generado automáticamente por el Dashboard de Análisis DGIPSE
+    """
+    return report.encode('utf-8')
+
+# ==========================================================
 # CONFIGURACIÓN INICIAL
 # ==========================================================
 st.set_page_config(
@@ -122,14 +155,6 @@ with st.sidebar:
         max_value=5, 
         value=3,
         help="Número de grupos para segmentación de usuarios"
-    )
-    
-    st.markdown("---")
-    st.markdown("### 📈 Personalización Gráficos")
-    theme = st.selectbox(
-        "Tema de colores",
-        ["Plotly", "Viridis", "Plasma", "Inferno", "Dark24"],
-        help="Selecciona la paleta de colores para los gráficos"
     )
     
     st.markdown("---")
@@ -306,7 +331,7 @@ if uploaded_file:
     col1, col2 = st.columns([2, 1])
 
     with col1:
-        st.markdown('<div class="plot-container">', unsafe_allow_html=True)
+        
         st.markdown("#### 📊 Tráfico por Hora del Día")
         
         # Tráfico por hora
@@ -339,7 +364,7 @@ if uploaded_file:
         st.markdown('</div>', unsafe_allow_html=True)
 
     with col2:
-        st.markdown('<div class="plot-container">', unsafe_allow_html=True)
+        
         st.markdown("#### 🌍 Distribución Geográfica")
         
         # Distribución por países
@@ -373,7 +398,7 @@ if uploaded_file:
     col3, col4 = st.columns(2)
 
     with col3:
-        st.markdown('<div class="plot-container">', unsafe_allow_html=True)
+        
         st.markdown("#### 📱 Distribución por Dispositivo")
         
         dispositivo_data = df_processed['dispositivo'].value_counts().reset_index()
@@ -407,7 +432,7 @@ if uploaded_file:
         st.markdown('</div>', unsafe_allow_html=True)
 
     with col4:
-        st.markdown('<div class="plot-container">', unsafe_allow_html=True)
+        
         st.markdown("#### 🌐 Navegadores Más Utilizados")
         
         navegador_data = df_processed['navegador'].value_counts().reset_index()
@@ -435,7 +460,7 @@ if uploaded_file:
         st.markdown('</div>', unsafe_allow_html=True)
 
     # Fila 3: Páginas más visitadas
-    st.markdown('<div class="plot-container">', unsafe_allow_html=True)
+    
     st.markdown("#### 🔥 Top 10 Páginas Más Visitadas")
     
     paginas_populares = df_processed[~df_processed['es_estatico']]['url'].value_counts().head(10).reset_index()
@@ -483,7 +508,7 @@ if uploaded_file:
     col5, col6 = st.columns(2)
 
     with col5:
-        st.markdown('<div class="plot-container">', unsafe_allow_html=True)
+        
         st.markdown("#### 🚨 Detección de Anomalías y Bots")
         
         # Preparar datos para el scatter plot
@@ -527,7 +552,7 @@ if uploaded_file:
         st.markdown('</div>', unsafe_allow_html=True)
 
     with col6:
-        st.markdown('<div class="plot-container">', unsafe_allow_html=True)
+
         st.markdown("#### 👥 Segmentación de Usuarios por Comportamiento")
         
         # K-Means Clustering
@@ -576,7 +601,7 @@ if uploaded_file:
     col7, col8 = st.columns(2)
 
     with col7:
-        st.markdown('<div class="plot-container">', unsafe_allow_html=True)
+        
         st.markdown("#### 📅 Tráfico por Día de la Semana")
         
         dia_orden = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
@@ -612,7 +637,7 @@ if uploaded_file:
         st.markdown('</div>', unsafe_allow_html=True)
 
     with col8:
-        st.markdown('<div class="plot-container">', unsafe_allow_html=True)
+        
         st.markdown("#### 🌙 Patrón de Actividad por Hora")
         
         # Heatmap de actividad por hora y dispositivo
@@ -653,6 +678,7 @@ if uploaded_file:
         col9, col10 = st.columns(2)
         
         with col9:
+            hora_pico = trafico_por_hora.loc[trafico_por_hora['count'].idxmax(), 'hora']
             st.markdown(f"""
             <div style='background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); padding: 1.5rem; border-radius: 10px;'>
             <h4 style='color: #1976d2; margin-top: 0;'>📈 Métricas de Tráfico</h4>
@@ -661,7 +687,7 @@ if uploaded_file:
                 <li><strong>Usuarios únicos:</strong> {metricas['Usuarios únicos']:,}</li>
                 <li><strong>Total de requests:</strong> {metricas['Total de requests']:,}</li>
                 <li><strong>Tráfico móvil:</strong> {metricas['% Móvil']:.1f}%</li>
-                <li><strong>Hora pico:</strong> {trafico_por_hora.loc[trafico_por_hora['count'].idxmax(), 'hora']}:00 hs</li>
+                <li><strong>Hora pico:</strong> {hora_pico}:00 hs</li>
             </ul>
             </div>
             """, unsafe_allow_html=True)
@@ -683,11 +709,12 @@ if uploaded_file:
     with tab2:
         st.markdown("### 🔧 Recomendaciones Estratégicas")
         
+        hora_pico = trafico_por_hora.loc[trafico_por_hora['count'].idxmax(), 'hora']
         recommendations = [
             {
                 "icon": "🚀",
                 "title": "Optimización de Horario Pico",
-                "description": f"Escalar recursos entre {trafico_por_hora.loc[trafico_por_hora['count'].idxmax(), 'hora']-1}:00 y {trafico_por_hora.loc[trafico_por_hora['count'].idxmax(), 'hora']+1}:00 horas",
+                "description": f"Escalar recursos entre {hora_pico-1}:00 y {hora_pico+1}:00 horas",
                 "priority": "Alta"
             },
             {
@@ -819,33 +846,3 @@ else:
                 }
             ]
         })
-
-def generate_executive_report(metricas, features, df_processed):
-    """Genera un reporte ejecutivo en texto plano"""
-    report = f"""
-    REPORTE EJECUTIVO - ANÁLISIS DE TRÁFICO DGIPSE
-    Fecha de generación: {datetime.now().strftime('%d/%m/%Y %H:%M')}
-    ===================================================
-    
-    RESUMEN EJECUTIVO:
-    - Total de requests analizados: {metricas['Total de requests']:,}
-    - Usuarios únicos identificados: {metricas['Usuarios únicos']:,}
-    - Tráfico móvil: {metricas['% Móvil']:.1f}%
-    - Tasa de anomalías: {metricas['% Anomalías']:.2f}%
-    
-    PRINCIPALES HALLAZGOS:
-    1. Seguridad: {metricas['IPs sospechosas']} IPs marcadas como sospechosas
-    2. Dispositivos: {metricas['% Móvil']:.1f}% del tráfico desde móviles
-    3. Geografía: Tráfico predominante desde {metricas['País predominante']}
-    4. Navegadores: {metricas['Navegador principal']} es el más utilizado
-    
-    RECOMENDACIONES PRIORITARIAS:
-    1. Implementar medidas de seguridad para IPs sospechosas
-    2. Optimizar experiencia mobile
-    3. Monitoreo continuo de patrones anómalos
-    4. Escalado de recursos en horarios pico
-    
-    ---
-    Generado automáticamente por el Dashboard de Análisis DGIPSE
-    """
-    return report.encode('utf-8')
