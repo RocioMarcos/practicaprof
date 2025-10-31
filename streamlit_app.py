@@ -5,8 +5,10 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
+import plotly.express as px
+import plotly.graph_objects as go
+import plotly.subplots as sp
+from plotly.colors import qualitative
 from datetime import datetime
 from sklearn.ensemble import IsolationForest
 from sklearn.cluster import KMeans
@@ -20,39 +22,68 @@ warnings.filterwarnings('ignore')
 st.set_page_config(
     page_title="Análisis de Tráfico DGIPSE", 
     layout="wide",
-    page_icon="📊"
+    page_icon="📊",
+    initial_sidebar_state="expanded"
 )
 
-# Configuración de estilos
-plt.style.use('default')
-sns.set_palette("husl")
-pd.set_option('display.max_columns', None)
-
-# Estilos CSS personalizados
+# Estilos CSS personalizados mejorados
 st.markdown("""
 <style>
     .main-header {
-        font-size: 2.5rem;
-        color: #1f77b4;
+        font-size: 2.8rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
         text-align: center;
         margin-bottom: 2rem;
+        font-weight: 700;
     }
     .metric-card {
-        background-color: #f0f2f6;
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
         padding: 1.5rem;
-        border-radius: 10px;
-        border-left: 4px solid #1f77b4;
+        border-radius: 15px;
+        border-left: 5px solid #667eea;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s ease;
+    }
+    .metric-card:hover {
+        transform: translateY(-5px);
     }
     .anomaly-metric {
-        background-color: #fff5f5;
-        border-left: 4px solid #ff6b6b;
+        background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+        border-left: 5px solid #ff6b6b;
+    }
+    .section-header {
+        font-size: 1.8rem;
+        color: #2c3e50;
+        margin: 2rem 0 1rem 0;
+        padding-bottom: 0.5rem;
+        border-bottom: 3px solid #3498db;
+        font-weight: 600;
     }
     .plot-container {
-        background-color: white;
-        padding: 1rem;
+        background: white;
+        padding: 1.5rem;
+        border-radius: 15px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        margin-bottom: 1.5rem;
+        border: 1px solid #e0e6ed;
+    }
+    .stButton button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
         border-radius: 10px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        margin-bottom: 1rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    .stButton button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    }
+    .sidebar .sidebar-content {
+        background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
     }
 </style>
 """, unsafe_allow_html=True)
@@ -60,21 +91,68 @@ st.markdown("""
 # ==========================================================
 # HEADER PRINCIPAL
 # ==========================================================
-st.markdown('<p class="main-header">📊 Análisis y Monitoreo del Tráfico Web - DGIPSE</p>', unsafe_allow_html=True)
+st.markdown('<p class="main-header">📊 Dashboard Interactivo - Análisis de Tráfico Web</p>', unsafe_allow_html=True)
 
 st.markdown("""
-<div style='text-align: center; margin-bottom: 2rem;'>
-    Este dashboard analiza el tráfico web del sitio <strong>dgipse.gob.ar</strong> para identificar 
-    patrones de acceso, detectar anomalías y optimizar el rendimiento.
+<div style='text-align: center; margin-bottom: 3rem; font-size: 1.2rem; color: #5a67d8;'>
+    Monitoreo inteligente del tráfico web de <strong>dgipse.gob.ar</strong> 
+    <br>Detección proactiva de anomalías y optimización del rendimiento
 </div>
 """, unsafe_allow_html=True)
 
 # ==========================================================
+# SIDEBAR CON CONFIGURACIONES
+# ==========================================================
+with st.sidebar:
+    st.markdown("## ⚙️ Configuración")
+    st.markdown("---")
+    
+    st.markdown("### 🔍 Parámetros de Análisis")
+    contamination_rate = st.slider(
+        "Sensibilidad detección anomalías", 
+        min_value=0.01, 
+        max_value=0.2, 
+        value=0.05,
+        help="Ajusta la sensibilidad del algoritmo para detectar comportamientos anómalos"
+    )
+    
+    n_clusters = st.slider(
+        "Número de clusters", 
+        min_value=2, 
+        max_value=5, 
+        value=3,
+        help="Número de grupos para segmentación de usuarios"
+    )
+    
+    st.markdown("---")
+    st.markdown("### 📈 Personalización Gráficos")
+    theme = st.selectbox(
+        "Tema de colores",
+        ["Plotly", "Viridis", "Plasma", "Inferno", "Dark24"],
+        help="Selecciona la paleta de colores para los gráficos"
+    )
+    
+    st.markdown("---")
+    st.markdown("#### 📊 Información")
+    st.markdown("""
+    **DGIPSE** - Dirección General de Informática y Procesamiento de Santiago del Estero
+    
+    🎯 **Objetivos:**
+    - Monitoreo proactivo
+    - Detección de bots
+    - Optimización de recursos
+    - Mejora experiencia usuario
+    """)
+
+# ==========================================================
 # CARGA DE DATOS
 # ==========================================================
-with st.container():
-    st.markdown("### 📁 Carga de Datos")
-    uploaded_file = st.file_uploader("Subí el archivo `datos.json`", type=["json"], help="Archivo JSON con los logs de acceso web")
+st.markdown("### 📁 Carga de Datos")
+uploaded_file = st.file_uploader(
+    "Subí tu archivo `datos.json` para comenzar el análisis", 
+    type=["json"], 
+    help="Archivo JSON con los logs de acceso web en el formato especificado"
+)
 
 if uploaded_file:
     df = pd.read_json(uploaded_file)
@@ -93,7 +171,7 @@ if uploaded_file:
         for key, value in browsers.items():
             if key in user_agent:
                 return value
-        return 'Other'
+        return 'Otros'
 
     def extract_os(user_agent):
         os_list = {
@@ -106,12 +184,12 @@ if uploaded_file:
         for key, value in os_list.items():
             if key in user_agent:
                 return value
-        return 'Other'
+        return 'Otros'
 
     def extract_device(user_agent):
         mobile_indicators = ['Mobile', 'Android', 'iPhone', 'iPad']
         if any(indicator in user_agent for indicator in mobile_indicators):
-            return 'Mobile'
+            return 'Móvil'
         return 'Desktop'
 
     def geolocate_ip(ip):
@@ -121,12 +199,13 @@ if uploaded_file:
             '181.': 'Chile', 
             '200.1': 'Brasil',
             '186.': 'Colombia',
-            '200.32': 'Uruguay'
+            '200.32': 'Uruguay',
+            '200.3': 'Paraguay'
         }
         for prefix, country in ip_ranges.items():
             if ip.startswith(prefix):
                 return country
-        return 'Otros'
+        return 'Otros Países'
 
     def preprocess_data(df):
         df['fecha'] = pd.to_datetime(df['fecha'], format='%d-%m-%Y %I:%M:%S%p', errors='coerce')
@@ -136,21 +215,25 @@ if uploaded_file:
         static_extensions = ['.css', '.js', '.jpg', '.jpeg', '.png', '.gif', '.ico', '.svg', '.woff', '.ttf']
         df['es_estatico'] = df['url'].str.contains('|'.join(static_extensions), case=False, na=False)
         df['pais'] = df['IP'].apply(geolocate_ip)
+        df['hora'] = df['fecha'].dt.hour
+        df['dia_semana'] = df['fecha'].dt.day_name()
+        df['mes'] = df['fecha'].dt.month_name()
         return df
 
     # ==========================================================
     # PREPROCESAMIENTO
     # ==========================================================
-    with st.spinner('Procesando datos...'):
+    with st.spinner('🔄 Procesando datos y generando visualizaciones...'):
         df_processed = preprocess_data(df.copy())
-        df_processed['hora'] = df_processed['fecha'].dt.hour
-        df_processed['dia_semana'] = df_processed['fecha'].dt.day_name()
 
-    st.success("✅ Datos cargados y preprocesados correctamente")
+    st.success(f"✅ **{len(df_processed):,} registros** procesados correctamente")
 
     # ==========================================================
-    # MÉTRICAS CLAVE
+    # MÉTRICAS CLAVE INTERACTIVAS
     # ==========================================================
+    st.markdown("### 📊 Métricas Principales en Tiempo Real")
+
+    # Cálculo de métricas
     features = df_processed.groupby('IP').agg({
         'fecha': 'count',
         'url': 'nunique',
@@ -159,358 +242,610 @@ if uploaded_file:
 
     scaler = StandardScaler()
     features_scaled = scaler.fit_transform(features)
-    iso_forest = IsolationForest(contamination=0.05, random_state=42, n_estimators=100)
+    iso_forest = IsolationForest(contamination=contamination_rate, random_state=42, n_estimators=100)
     anomalies = iso_forest.fit_predict(features_scaled)
     features['es_anomalia'] = np.where(anomalies == -1, 1, 0)
 
     metricas = {
         'Usuarios únicos': df_processed['IP'].nunique(),
         'Total de requests': len(df_processed),
-        '% Mobile': (df_processed['dispositivo'] == 'Mobile').mean() * 100,
+        '% Móvil': (df_processed['dispositivo'] == 'Móvil').mean() * 100,
         'Navegador principal': df_processed['navegador'].mode()[0] if len(df_processed['navegador'].mode()) > 0 else 'N/A',
         'País predominante': df_processed['pais'].mode()[0] if len(df_processed['pais'].mode()) > 0 else 'N/A',
-        '% Anomalías': features['es_anomalia'].mean() * 100
+        '% Anomalías': features['es_anomalia'].mean() * 100,
+        'IPs sospechosas': len(features[features['es_anomalia'] == 1])
     }
 
-    # Mostrar métricas con mejor diseño
-    st.markdown("### 📈 Métricas Clave del Tráfico")
-    
+    # Mostrar métricas en columnas
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-        st.metric("👥 Usuarios Únicos", f"{metricas['Usuarios únicos']:,}")
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class="metric-card">
+            <div style="font-size: 2rem; color: #667eea;">👥</div>
+            <div style="font-size: 1.2rem; font-weight: bold; color: #2c3e50;">Usuarios Únicos</div>
+            <div style="font-size: 1.8rem; font-weight: bold; color: #667eea;">{metricas['Usuarios únicos']:,}</div>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col2:
-        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-        st.metric("📨 Total Requests", f"{metricas['Total de requests']:,}")
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class="metric-card">
+            <div style="font-size: 2rem; color: #764ba2;">📨</div>
+            <div style="font-size: 1.2rem; font-weight: bold; color: #2c3e50;">Total Requests</div>
+            <div style="font-size: 1.8rem; font-weight: bold; color: #764ba2;">{metricas['Total de requests']:,}</div>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col3:
-        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-        st.metric("📱 % Mobile", f"{metricas['% Mobile']:.1f}%")
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class="metric-card">
+            <div style="font-size: 2rem; color: #f093fb;">📱</div>
+            <div style="font-size: 1.2rem; font-weight: bold; color: #2c3e50;">Tráfico Móvil</div>
+            <div style="font-size: 1.8rem; font-weight: bold; color: #f093fb;">{metricas['% Móvil']:.1f}%</div>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col4:
-        st.markdown('<div class="metric-card anomaly-metric">', unsafe_allow_html=True)
-        st.metric("🚨 % Anomalías", f"{metricas['% Anomalías']:.2f}%")
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    col5, col6 = st.columns(2)
-    
-    with col5:
-        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-        st.metric("🌐 Navegador Principal", metricas['Navegador principal'])
-        st.markdown('</div>', unsafe_allow_html=True)
-    
-    with col6:
-        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-        st.metric("📍 País Predominante", metricas['País predominante'])
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class="metric-card anomaly-metric">
+            <div style="font-size: 2rem; color: #ff6b6b;">🚨</div>
+            <div style="font-size: 1.2rem; font-weight: bold; color: #2c3e50;">Anomalías Detectadas</div>
+            <div style="font-size: 1.8rem; font-weight: bold; color: #ff6b6b;">{metricas['% Anomalías']:.2f}%</div>
+            <div style="font-size: 0.9rem; color: #666;">{metricas['IPs sospechosas']} IPs</div>
+        </div>
+        """, unsafe_allow_html=True)
 
     # ==========================================================
-    # VISUALIZACIONES MEJORADAS
+    # VISUALIZACIONES INTERACTIVAS CON PLOTLY
     # ==========================================================
     st.markdown("---")
-    st.markdown("### 📊 Visualizaciones del Tráfico")
+    st.markdown("## 📈 Análisis Visual Interactivo")
 
-    # Primera fila de gráficos
+    # Fila 1: Tráfico por hora y Distribución geográfica
     col1, col2 = st.columns([2, 1])
-    
+
     with col1:
         st.markdown('<div class="plot-container">', unsafe_allow_html=True)
-        # Tráfico por hora - Mejorado
-        trafico_por_hora = df_processed.groupby('hora').size()
-        fig, ax = plt.subplots(figsize=(12, 6))
+        st.markdown("#### 📊 Tráfico por Hora del Día")
         
-        # Crear gradiente de colores
-        colors = plt.cm.Blues(np.linspace(0.4, 0.8, len(trafico_por_hora)))
+        # Tráfico por hora
+        trafico_por_hora = df_processed.groupby('hora').size().reset_index(name='count')
         
-        bars = ax.bar(trafico_por_hora.index, trafico_por_hora.values, color=colors, alpha=0.8, edgecolor='darkblue', linewidth=0.5)
+        fig_hora = px.area(
+            trafico_por_hora, 
+            x='hora', 
+            y='count',
+            title="Distribución Horaria del Tráfico",
+            labels={'hora': 'Hora del Día', 'count': 'Número de Requests'},
+            color_discrete_sequence=['#667eea']
+        )
         
-        # Mejorar el diseño
-        ax.set_title('📈 Tráfico por Hora del Día', fontsize=14, fontweight='bold', pad=20)
-        ax.set_xlabel('Hora del Día', fontweight='bold')
-        ax.set_ylabel('Número de Requests', fontweight='bold')
-        ax.grid(True, alpha=0.3)
-        ax.set_axisbelow(True)
+        fig_hora.update_layout(
+            hovermode='x unified',
+            showlegend=False,
+            height=400,
+            xaxis=dict(tickmode='linear', dtick=1),
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)',
+        )
         
-        # Añadir valor en cada barra
-        for bar in bars:
-            height = bar.get_height()
-            ax.text(bar.get_x() + bar.get_width()/2., height + max(trafico_por_hora.values)*0.01,
-                   f'{int(height):,}', ha='center', va='bottom', fontsize=9)
+        fig_hora.update_traces(
+            hovertemplate="<b>Hora %{x}:00</b><br>%{y:,} requests<extra></extra>",
+            fill='tozeroy'
+        )
         
-        plt.tight_layout()
-        st.pyplot(fig)
+        st.plotly_chart(fig_hora, use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
-    
+
     with col2:
         st.markdown('<div class="plot-container">', unsafe_allow_html=True)
-        # Distribución geográfica mejorada
-        pais_distribution = df_processed['pais'].value_counts()
+        st.markdown("#### 🌍 Distribución Geográfica")
         
-        fig2, ax2 = plt.subplots(figsize=(8, 8))
+        # Distribución por países
+        pais_distribution = df_processed['pais'].value_counts().reset_index()
+        pais_distribution.columns = ['pais', 'count']
         
-        # Paleta de colores atractiva
-        colors = plt.cm.Set3(np.linspace(0, 1, len(pais_distribution)))
+        fig_pie = px.pie(
+            pais_distribution,
+            values='count',
+            names='pais',
+            hole=0.4,
+            color_discrete_sequence=px.colors.qualitative.Set3
+        )
         
-        wedges, texts, autotexts = ax2.pie(pais_distribution.values, 
-                                          labels=pais_distribution.index,
-                                          autopct='%1.1f%%',
-                                          colors=colors,
-                                          startangle=90,
-                                          textprops={'fontsize': 10})
+        fig_pie.update_layout(
+            height=400,
+            showlegend=True,
+            legend=dict(orientation="v", yanchor="middle", y=0.5, xanchor="left", x=1.1)
+        )
         
-        # Mejorar los textos
-        for autotext in autotexts:
-            autotext.set_color('white')
-            autotext.set_fontweight('bold')
+        fig_pie.update_traces(
+            hovertemplate="<b>%{label}</b><br>%{value:,} requests (%{percent})<extra></extra>",
+            textposition='inside',
+            textinfo='percent+label'
+        )
         
-        ax2.set_title('🌍 Distribución Geográfica', fontsize=12, fontweight='bold', pad=20)
-        plt.tight_layout()
-        st.pyplot(fig2)
+        st.plotly_chart(fig_pie, use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # Segunda fila de gráficos
+    # Fila 2: Dispositivos y Navegadores
     col3, col4 = st.columns(2)
-    
+
     with col3:
         st.markdown('<div class="plot-container">', unsafe_allow_html=True)
-        # Dispositivos
-        dispositivo_data = df_processed['dispositivo'].value_counts()
+        st.markdown("#### 📱 Distribución por Dispositivo")
         
-        fig3, ax3 = plt.subplots(figsize=(10, 6))
-        colors = ['#ff9999', '#66b3ff']
-        bars = ax3.bar(dispositivo_data.index, dispositivo_data.values, color=colors, alpha=0.8)
+        dispositivo_data = df_processed['dispositivo'].value_counts().reset_index()
+        dispositivo_data.columns = ['dispositivo', 'count']
         
-        ax3.set_title('📱 Distribución por Dispositivo', fontsize=12, fontweight='bold')
-        ax3.set_ylabel('Cantidad de Requests', fontweight='bold')
+        fig_dev = px.bar(
+            dispositivo_data,
+            x='dispositivo',
+            y='count',
+            color='dispositivo',
+            color_discrete_sequence=['#667eea', '#764ba2'],
+            text='count'
+        )
         
-        # Añadir valores en las barras
-        for bar in bars:
-            height = bar.get_height()
-            ax3.text(bar.get_x() + bar.get_width()/2., height + max(dispositivo_data.values)*0.01,
-                    f'{int(height):,}', ha='center', va='bottom', fontweight='bold')
+        fig_dev.update_layout(
+            height=400,
+            showlegend=False,
+            xaxis_title="",
+            yaxis_title="Cantidad de Requests",
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)',
+        )
         
-        plt.xticks(rotation=0)
-        plt.tight_layout()
-        st.pyplot(fig3)
-        st.markdown('</div>', unsafe_allow_html=True)
-    
-    with col4:
-        st.markdown('<div class="plot-container">', unsafe_allow_html=True)
-        # Navegadores
-        navegador_data = df_processed['navegador'].value_counts()
+        fig_dev.update_traces(
+            hovertemplate="<b>%{x}</b><br>%{y:,} requests<extra></extra>",
+            texttemplate='%{y:,}',
+            textposition='outside'
+        )
         
-        fig4, ax4 = plt.subplots(figsize=(10, 6))
-        colors = plt.cm.Pastel1(range(len(navegador_data)))
-        bars = ax4.bar(navegador_data.index, navegador_data.values, color=colors, alpha=0.8)
-        
-        ax4.set_title('🌐 Distribución por Navegador', fontsize=12, fontweight='bold')
-        ax4.set_ylabel('Cantidad de Requests', fontweight='bold')
-        
-        # Añadir valores en las barras
-        for bar in bars:
-            height = bar.get_height()
-            ax4.text(bar.get_x() + bar.get_width()/2., height + max(navegador_data.values)*0.01,
-                    f'{int(height):,}', ha='center', va='bottom', fontsize=9, fontweight='bold')
-        
-        plt.xticks(rotation=45, ha='right')
-        plt.tight_layout()
-        st.pyplot(fig4)
+        st.plotly_chart(fig_dev, use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # Tercera fila - Páginas más visitadas
+    with col4:
+        st.markdown('<div class="plot-container">', unsafe_allow_html=True)
+        st.markdown("#### 🌐 Navegadores Más Utilizados")
+        
+        navegador_data = df_processed['navegador'].value_counts().reset_index()
+        navegador_data.columns = ['navegador', 'count']
+        
+        fig_nav = px.pie(
+            navegador_data,
+            values='count',
+            names='navegador',
+            color_discrete_sequence=px.colors.qualitative.Pastel
+        )
+        
+        fig_nav.update_layout(
+            height=400,
+            showlegend=True
+        )
+        
+        fig_nav.update_traces(
+            hovertemplate="<b>%{label}</b><br>%{value:,} requests (%{percent})<extra></extra>",
+            textposition='inside',
+            textinfo='percent+label'
+        )
+        
+        st.plotly_chart(fig_nav, use_container_width=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # Fila 3: Páginas más visitadas
     st.markdown('<div class="plot-container">', unsafe_allow_html=True)
-    paginas_populares = df_processed[~df_processed['es_estatico']]['url'].value_counts().head(10)
+    st.markdown("#### 🔥 Top 10 Páginas Más Visitadas")
     
-    fig5, ax5 = plt.subplots(figsize=(12, 8))
-    colors = plt.cm.viridis(np.linspace(0.2, 0.8, len(paginas_populares)))
-    
-    bars = ax5.barh(range(len(paginas_populares)), paginas_populares.values, color=colors, alpha=0.8)
-    ax5.set_yticks(range(len(paginas_populares)))
+    paginas_populares = df_processed[~df_processed['es_estatico']]['url'].value_counts().head(10).reset_index()
+    paginas_populares.columns = ['url', 'visitas']
     
     # Acortar URLs largas para mejor visualización
-    shortened_labels = [label[:50] + '...' if len(label) > 50 else label for label in paginas_populares.index]
-    ax5.set_yticklabels(shortened_labels, fontsize=10)
+    paginas_populares['url_corto'] = paginas_populares['url'].apply(
+        lambda x: x[:40] + '...' if len(x) > 40 else x
+    )
     
-    ax5.set_title('🔥 Top 10 Páginas Más Visitadas', fontsize=14, fontweight='bold', pad=20)
-    ax5.set_xlabel('Número de Visitas', fontweight='bold')
+    fig_paginas = px.bar(
+        paginas_populares,
+        y='url_corto',
+        x='visitas',
+        orientation='h',
+        color='visitas',
+        color_continuous_scale='viridis',
+        text='visitas'
+    )
     
-    # Añadir valores en las barras
-    for i, bar in enumerate(bars):
-        width = bar.get_width()
-        ax5.text(width + max(paginas_populares.values)*0.01, bar.get_y() + bar.get_height()/2.,
-                f'{int(width):,}', ha='left', va='center', fontweight='bold')
+    fig_paginas.update_layout(
+        height=500,
+        xaxis_title="Número de Visitas",
+        yaxis_title="",
+        yaxis={'categoryorder':'total ascending'},
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+    )
     
-    plt.tight_layout()
-    st.pyplot(fig5)
+    fig_paginas.update_traces(
+        hovertemplate="<b>%{y}</b><br>%{x:,} visitas<extra></extra>",
+        texttemplate='%{x:,}',
+        textposition='outside'
+    )
+    
+    st.plotly_chart(fig_paginas, use_container_width=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
     # ==========================================================
-    # DETECCIÓN DE ANOMALÍAS Y CLUSTERING
+    # ANÁLISIS AVANZADO INTERACTIVO
     # ==========================================================
     st.markdown("---")
-    st.markdown("### 🧠 Análisis Avanzado - Detección de Anomalías")
+    st.markdown("## 🧠 Análisis Avanzado - Machine Learning")
 
-    col7, col8 = st.columns(2)
-    
-    with col7:
+    col5, col6 = st.columns(2)
+
+    with col5:
         st.markdown('<div class="plot-container">', unsafe_allow_html=True)
-        # Detección de anomalías
-        fig6, ax6 = plt.subplots(figsize=(10, 8))
+        st.markdown("#### 🚨 Detección de Anomalías y Bots")
         
-        # Separar puntos normales y anomalías
-        normal_points = features[features['es_anomalia'] == 0]
-        anomaly_points = features[features['es_anomalia'] == 1]
+        # Preparar datos para el scatter plot
+        scatter_data = features.reset_index()
         
-        ax6.scatter(normal_points['total_requests'], normal_points['unique_pages'],
-                   c='green', alpha=0.6, s=50, label='Normal', edgecolors='black', linewidth=0.5)
-        ax6.scatter(anomaly_points['total_requests'], anomaly_points['unique_pages'],
-                   c='red', alpha=0.8, s=80, label='Anomalía', edgecolors='darkred', linewidth=0.8, marker='X')
+        fig_anomalies = px.scatter(
+            scatter_data,
+            x='total_requests',
+            y='unique_pages',
+            color='es_anomalia',
+            color_discrete_map={0: '#2ecc71', 1: '#e74c3c'},
+            size='unique_hours',
+            hover_data=['IP'],
+            labels={
+                'total_requests': 'Total de Requests por IP',
+                'unique_pages': 'Páginas Únicas Visitadas',
+                'es_anomalia': 'Es Anomalía'
+            },
+            title="Comportamiento de Usuarios vs Anomalías"
+        )
         
-        ax6.set_title('🚨 Detección de Anomalías / Bots', fontsize=12, fontweight='bold')
-        ax6.set_xlabel('Total de Requests por IP', fontweight='bold')
-        ax6.set_ylabel('Páginas Únicas Visitadas', fontweight='bold')
-        ax6.legend()
-        ax6.grid(True, alpha=0.3)
+        fig_anomalies.update_layout(
+            height=500,
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)',
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=1.02,
+                xanchor="right",
+                x=1
+            )
+        )
         
-        plt.tight_layout()
-        st.pyplot(fig6)
+        fig_anomalies.update_traces(
+            hovertemplate="<b>IP: %{customdata[0]}</b><br>Requests: %{x}<br>Páginas únicas: %{y}<extra></extra>",
+            marker=dict(opacity=0.7, line=dict(width=1, color='DarkSlateGrey'))
+        )
+        
+        st.plotly_chart(fig_anomalies, use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
-    
-    with col8:
+
+    with col6:
         st.markdown('<div class="plot-container">', unsafe_allow_html=True)
+        st.markdown("#### 👥 Segmentación de Usuarios por Comportamiento")
+        
         # K-Means Clustering
         cluster_features = features[['total_requests', 'unique_pages', 'unique_hours']].dropna()
         cluster_scaled = scaler.fit_transform(cluster_features)
-        kmeans = KMeans(n_clusters=3, random_state=42)
+        kmeans = KMeans(n_clusters=n_clusters, random_state=42)
+        cluster_features = cluster_features.copy()
         cluster_features['cluster'] = kmeans.fit_predict(cluster_scaled)
         
-        fig7, ax7 = plt.subplots(figsize=(10, 8))
+        fig_clusters = px.scatter(
+            cluster_features.reset_index(),
+            x='total_requests',
+            y='unique_pages',
+            color='cluster',
+            color_continuous_scale='viridis',
+            size='unique_hours',
+            hover_data=['IP'],
+            labels={
+                'total_requests': 'Total de Requests por IP',
+                'unique_pages': 'Páginas Únicas Visitadas',
+                'cluster': 'Grupo'
+            },
+            title=f"Segmentación en {n_clusters} Grupos de Comportamiento"
+        )
         
-        scatter = ax7.scatter(cluster_features['total_requests'], cluster_features['unique_pages'],
-                             c=cluster_features['cluster'], cmap='tab10', alpha=0.7, s=60, edgecolors='black', linewidth=0.5)
+        fig_clusters.update_layout(
+            height=500,
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)',
+        )
         
-        ax7.set_title('👥 Segmentación de Usuarios por Comportamiento', fontsize=12, fontweight='bold')
-        ax7.set_xlabel('Total de Requests por IP', fontweight='bold')
-        ax7.set_ylabel('Páginas Únicas Visitadas', fontweight='bold')
-        plt.colorbar(scatter, ax=ax7, label='Cluster')
-        ax7.grid(True, alpha=0.3)
+        fig_clusters.update_traces(
+            hovertemplate="<b>IP: %{customdata[0]}</b><br>Requests: %{x}<br>Páginas únicas: %{y}<br>Grupo: %{marker.color}<extra></extra>",
+            marker=dict(opacity=0.7, line=dict(width=1, color='DarkSlateGrey'))
+        )
         
-        plt.tight_layout()
-        st.pyplot(fig7)
+        st.plotly_chart(fig_clusters, use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
     # ==========================================================
-    # INSIGHTS Y DESCARGAS
+    # ANÁLISIS TEMPORAL AVANZADO
     # ==========================================================
     st.markdown("---")
-    
-    col9, col10 = st.columns(2)
-    
-    with col9:
-        st.markdown("### 💡 Insights Principales")
-        st.markdown("""
-        <div style='background-color: #e8f4fd; padding: 1.5rem; border-radius: 10px; border-left: 4px solid #1f77b4;'>
-        <ul style='margin: 0; padding-left: 1.2rem;'>
-            <li><strong>Horas pico:</strong> Identificar horas con mayor tráfico para optimización</li>
-            <li><strong>Origen geográfico:</strong> Principalmente {}</li>
-            <li><strong>Bots/Anomalías:</strong> {}% del tráfico total requiere atención</li>
-            <li><strong>Dispositivos:</strong> {}% del tráfico proviene de móviles</li>
-            <li><strong>Navegador predominante:</strong> {}</li>
-        </ul>
-        </div>
-        """.format(metricas['País predominante'], f"{metricas['% Anomalías']:.1f}", f"{metricas['% Mobile']:.1f}", metricas['Navegador principal']), 
-        unsafe_allow_html=True)
-    
-    with col10:
-        st.markdown("### 🔧 Recomendaciones")
-        st.markdown("""
-        <div style='background-color: #fff0f0; padding: 1.5rem; border-radius: 10px; border-left: 4px solid #ff6b6b;'>
-        <ol style='margin: 0; padding-left: 1.2rem;'>
-            <li>Optimizar servidores para horas pico identificadas</li>
-            <li>Implementar WAF para bloquear bots maliciosos</li>
-            <li>Mejorar experiencia mobile ({}% del tráfico)</li>
-            <li>Regionalizar contenido para {}</li>
-            <li>Monitoreo continuo de IPs sospechosas</li>
-        </ol>
-        </div>
-        """.format(f"{metricas['% Mobile']:.1f}", metricas['País predominante']), 
-        unsafe_allow_html=True)
+    st.markdown("## ⏰ Análisis Temporal Detallado")
+
+    col7, col8 = st.columns(2)
+
+    with col7:
+        st.markdown('<div class="plot-container">', unsafe_allow_html=True)
+        st.markdown("#### 📅 Tráfico por Día de la Semana")
+        
+        dia_orden = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+        dia_es = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
+        
+        trafico_dia = df_processed['dia_semana'].value_counts().reindex(dia_orden)
+        trafico_dia.index = dia_es
+        
+        fig_dia = px.bar(
+            x=trafico_dia.index,
+            y=trafico_dia.values,
+            color=trafico_dia.values,
+            color_continuous_scale='blues',
+            text=trafico_dia.values
+        )
+        
+        fig_dia.update_layout(
+            height=400,
+            xaxis_title="Día de la Semana",
+            yaxis_title="Número de Requests",
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)',
+            showlegend=False
+        )
+        
+        fig_dia.update_traces(
+            hovertemplate="<b>%{x}</b><br>%{y:,} requests<extra></extra>",
+            texttemplate='%{y:,}',
+            textposition='outside'
+        )
+        
+        st.plotly_chart(fig_dia, use_container_width=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    with col8:
+        st.markdown('<div class="plot-container">', unsafe_allow_html=True)
+        st.markdown("#### 🌙 Patrón de Actividad por Hora")
+        
+        # Heatmap de actividad por hora y dispositivo
+        heatmap_data = df_processed.groupby(['hora', 'dispositivo']).size().unstack(fill_value=0)
+        
+        fig_heat = px.imshow(
+            heatmap_data.T,
+            labels=dict(x="Hora del Día", y="Dispositivo", color="Requests"),
+            color_continuous_scale="YlOrRd",
+            aspect="auto"
+        )
+        
+        fig_heat.update_layout(
+            height=400,
+            xaxis=dict(tickmode='linear', dtick=1),
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)',
+        )
+        
+        fig_heat.update_traces(
+            hovertemplate="<b>Hora %{x}:00</b><br>Dispositivo: %{y}<br>Requests: %{z:,}<extra></extra>"
+        )
+        
+        st.plotly_chart(fig_heat, use_container_width=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
     # ==========================================================
-    # DESCARGAS
+    # PANEL DE CONTROL Y DESCARGAS
     # ==========================================================
     st.markdown("---")
-    st.markdown("### 📥 Exportar Resultados")
-    
-    col11, col12 = st.columns(2)
-    
-    with col11:
-        st.download_button(
-            label="⬇️ Descargar Datos Procesados (CSV)",
-            data=df_processed.to_csv(index=False).encode('utf-8'),
-            file_name="accesos_procesados.csv",
-            mime="text/csv",
-            use_container_width=True
-        )
-    
-    with col12:
-        st.download_button(
-            label="⬇️ Descargar IPs Sospechosas",
-            data=features[features['es_anomalia']==1].to_csv().encode('utf-8'),
-            file_name="ips_sospechosas.csv",
-            mime="text/csv",
-            use_container_width=True
-        )
+    st.markdown("## 🎛️ Panel de Control y Exportación")
 
-    # ==========================================================
-    # RESUMEN EJECUTIVO
-    # ==========================================================
-    with st.expander("📋 Resumen Ejecutivo", expanded=False):
-        st.markdown(f"""
-        ### Resumen de Análisis - {datetime.now().strftime('%d/%m/%Y')}
-        
-        **📊 Métricas Generales:**
-        - **Usuarios únicos analizados:** {metricas['Usuarios únicos']:,}
-        - **Total de requests procesados:** {metricas['Total de requests']:,}
-        - **Tráfico móvil:** {metricas['% Mobile']:.1f}%
-        - **Anomalías detectadas:** {metricas['% Anomalías']:.2f}%
-        
-        **🎯 Perfil de Tráfico:**
-        - **Navegador principal:** {metricas['Navegador principal']}
-        - **Origen predominante:** {metricas['País predominante']}
-        - **Horario de mayor actividad:** {trafico_por_hora.idxmax()}:00 hs
-        
-        **🛡️ Seguridad:**
-        - **IPs sospechosas identificadas:** {len(features[features['es_anomalia']==1])}
-        - **Recomendación prioritaria:** Implementar sistema de mitigación de bots
-        """)
+    tab1, tab2, tab3 = st.tabs(["📋 Resumen Ejecutivo", "🔧 Recomendaciones", "📥 Exportar Datos"])
 
-else:
-    st.info("👆 Subí tu archivo `datos.json` para comenzar el análisis.")
-    
-    # Mostrar ejemplo de estructura de datos
-    with st.expander("📝 Ver estructura de datos esperada"):
-        st.markdown("""
-        ### Estructura esperada del archivo JSON:
-        ```json
-        [
+    with tab1:
+        st.markdown("### Resumen Ejecutivo del Análisis")
+        
+        col9, col10 = st.columns(2)
+        
+        with col9:
+            st.markdown(f"""
+            <div style='background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); padding: 1.5rem; border-radius: 10px;'>
+            <h4 style='color: #1976d2; margin-top: 0;'>📈 Métricas de Tráfico</h4>
+            <ul style='color: #37474f;'>
+                <li><strong>Período analizado:</strong> {df_processed['fecha'].min().strftime('%d/%m/%Y')} - {df_processed['fecha'].max().strftime('%d/%m/%Y')}</li>
+                <li><strong>Usuarios únicos:</strong> {metricas['Usuarios únicos']:,}</li>
+                <li><strong>Total de requests:</strong> {metricas['Total de requests']:,}</li>
+                <li><strong>Tráfico móvil:</strong> {metricas['% Móvil']:.1f}%</li>
+                <li><strong>Hora pico:</strong> {trafico_por_hora.loc[trafico_por_hora['count'].idxmax(), 'hora']}:00 hs</li>
+            </ul>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col10:
+            st.markdown(f"""
+            <div style='background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%); padding: 1.5rem; border-radius: 10px;'>
+            <h4 style='color: #f57c00; margin-top: 0;'>🛡️ Seguridad y Riesgos</h4>
+            <ul style='color: #37474f;'>
+                <li><strong>Anomalías detectadas:</strong> {metricas['% Anomalías']:.2f}%</li>
+                <li><strong>IPs sospechosas:</strong> {metricas['IPs sospechosas']}</li>
+                <li><strong>Navegador principal:</strong> {metricas['Navegador principal']}</li>
+                <li><strong>Origen predominante:</strong> {metricas['País predominante']}</li>
+                <li><strong>Nivel de riesgo:</strong> {'BAJO' if metricas['% Anomalías'] < 3 else 'MEDIO' if metricas['% Anomalías'] < 8 else 'ALTO'}</li>
+            </ul>
+            </div>
+            """, unsafe_allow_html=True)
+
+    with tab2:
+        st.markdown("### 🔧 Recomendaciones Estratégicas")
+        
+        recommendations = [
             {
-                "fecha": "25-02-2024 10:30:45AM",
-                "IP": "200.81.123.45",
-                "url": "/pagina-ejemplo",
-                "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                "icon": "🚀",
+                "title": "Optimización de Horario Pico",
+                "description": f"Escalar recursos entre {trafico_por_hora.loc[trafico_por_hora['count'].idxmax(), 'hora']-1}:00 y {trafico_por_hora.loc[trafico_por_hora['count'].idxmax(), 'hora']+1}:00 horas",
+                "priority": "Alta"
             },
             {
-                "fecha": "25-02-2024 10:31:22AM", 
-                "IP": "190.123.456.78",
-                "url": "/otra-pagina",
-                "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X)"
+                "icon": "🛡️",
+                "title": "Mitigación de Bots",
+                "description": f"Implementar WAF para {metricas['IPs sospechosas']} IPs sospechosas identificadas",
+                "priority": "Alta"
+            },
+            {
+                "icon": "📱",
+                "title": "Experiencia Mobile",
+                "description": f"Optimizar para {metricas['% Móvil']:.1f}% de usuarios móviles",
+                "priority": "Media"
+            },
+            {
+                "icon": "🌍",
+                "title": "Contenido Regional",
+                "description": f"Adaptar contenido para usuarios de {metricas['País predominante']}",
+                "priority": "Media"
             }
         ]
-        ```
+        
+        for rec in recommendations:
+            with st.container():
+                col11, col12 = st.columns([1, 10])
+                with col11:
+                    st.markdown(f"<div style='font-size: 2rem;'>{rec['icon']}</div>", unsafe_allow_html=True)
+                with col12:
+                    st.markdown(f"""
+                    <div style='padding: 1rem; background: {"#ffebee" if rec['priority'] == 'Alta' else "#fff8e1" if rec['priority'] == 'Media' else "#e8f5e8"}; border-radius: 8px; margin-bottom: 1rem;'>
+                        <h4 style='margin: 0; color: #2c3e50;'>{rec['title']}</h4>
+                        <p style='margin: 0.5rem 0 0 0; color: #546e7a;'>{rec['description']}</p>
+                        <span style='background: {"#e53935" if rec['priority'] == 'Alta' else "#ffb300" if rec['priority'] == 'Media' else "#43a047"}; color: white; padding: 0.2rem 0.8rem; border-radius: 12px; font-size: 0.8rem;'>Prioridad: {rec['priority']}</span>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+    with tab3:
+        st.markdown("### 📥 Exportar Resultados del Análisis")
+        
+        col13, col14, col15 = st.columns(3)
+        
+        with col13:
+            st.download_button(
+                label="💾 Datos Completos (CSV)",
+                data=df_processed.to_csv(index=False).encode('utf-8'),
+                file_name=f"dgipse_trafico_completo_{datetime.now().strftime('%Y%m%d')}.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
+        
+        with col14:
+            st.download_button(
+                label="🚨 IPs Sospechosas",
+                data=features[features['es_anomalia'] == 1].to_csv().encode('utf-8'),
+                file_name=f"dgipse_ips_sospechosas_{datetime.now().strftime('%Y%m%d')}.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
+        
+        with col15:
+            st.download_button(
+                label="📊 Reporte Ejecutivo",
+                data=generate_executive_report(metricas, features, df_processed),
+                file_name=f"dgipse_reporte_ejecutivo_{datetime.now().strftime('%Y%m%d')}.txt",
+                mime="text/plain",
+                use_container_width=True
+            )
+        
+        # Vista previa de datos
+        with st.expander("👁️ Vista Previa de Datos Procesados"):
+            st.dataframe(
+                df_processed[['fecha', 'IP', 'url', 'navegador', 'dispositivo', 'pais']].head(10),
+                use_container_width=True
+            )
+
+else:
+    # Pantalla de bienvenida cuando no hay archivo cargado
+    st.markdown("---")
+    col_welcome1, col_welcome2 = st.columns([2, 1])
+    
+    with col_welcome1:
+        st.markdown("""
+        ## 🎯 Bienvenido al Dashboard de Análisis de Tráfico DGIPSE
+        
+        ### 📋 ¿Qué puedes hacer con esta herramienta?
+        
+        - **📊 Visualización interactiva** del tráfico web en tiempo real
+        - **🚨 Detección automática** de anomalías y comportamientos sospechosos  
+        - **👥 Segmentación inteligente** de usuarios por patrones de comportamiento
+        - **🌍 Análisis geográfico** del origen del tráfico
+        - **📈 Optimización** de recursos basada en patrones de uso
+        
+        ### 🚀 Comenzar es muy fácil:
+        1. **Prepará** tu archivo `datos.json` con los logs de acceso
+        2. **Subí** el archivo usando el selector arriba
+        3. **Explorá** las visualizaciones interactivas
+        4. **Descargá** los reportes y datos procesados
         """)
+    
+    with col_welcome2:
+        st.markdown("""
+        <div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 2rem; border-radius: 15px; color: white;'>
+        <h3 style='color: white; margin-top: 0;'>📁 Estructura del Archivo</h3>
+        <p>Tu archivo JSON debe contener:</p>
+        <ul style='color: white;'>
+            <li><strong>fecha:</strong> Timestamp</li>
+            <li><strong>IP:</strong> Dirección IP</li>
+            <li><strong>url:</strong> Página visitada</li>
+            <li><strong>user_agent:</strong> Navegador/Dispositivo</li>
+        </ul>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Ejemplo de estructura de datos
+    with st.expander("📝 Ver ejemplo de estructura de datos JSON", expanded=True):
+        st.json({
+            "datos": [
+                {
+                    "fecha": "25-02-2024 10:30:45AM",
+                    "IP": "200.81.123.45", 
+                    "url": "/pagina-principal",
+                    "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                },
+                {
+                    "fecha": "25-02-2024 10:31:22AM",
+                    "IP": "190.123.456.78",
+                    "url": "/contacto", 
+                    "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X)"
+                }
+            ]
+        })
+
+def generate_executive_report(metricas, features, df_processed):
+    """Genera un reporte ejecutivo en texto plano"""
+    report = f"""
+    REPORTE EJECUTIVO - ANÁLISIS DE TRÁFICO DGIPSE
+    Fecha de generación: {datetime.now().strftime('%d/%m/%Y %H:%M')}
+    ===================================================
+    
+    RESUMEN EJECUTIVO:
+    - Total de requests analizados: {metricas['Total de requests']:,}
+    - Usuarios únicos identificados: {metricas['Usuarios únicos']:,}
+    - Tráfico móvil: {metricas['% Móvil']:.1f}%
+    - Tasa de anomalías: {metricas['% Anomalías']:.2f}%
+    
+    PRINCIPALES HALLAZGOS:
+    1. Seguridad: {metricas['IPs sospechosas']} IPs marcadas como sospechosas
+    2. Dispositivos: {metricas['% Móvil']:.1f}% del tráfico desde móviles
+    3. Geografía: Tráfico predominante desde {metricas['País predominante']}
+    4. Navegadores: {metricas['Navegador principal']} es el más utilizado
+    
+    RECOMENDACIONES PRIORITARIAS:
+    1. Implementar medidas de seguridad para IPs sospechosas
+    2. Optimizar experiencia mobile
+    3. Monitoreo continuo de patrones anómalos
+    4. Escalado de recursos en horarios pico
+    
+    ---
+    Generado automáticamente por el Dashboard de Análisis DGIPSE
+    """
+    return report.encode('utf-8')
