@@ -19,7 +19,7 @@ Este proyecto es una aplicación web desarrollada con Streamlit para el **análi
 
 -------------------------------
 
-### **Características Principales**
+## **Características Principales**
 
 #### **Visualizaciones Avanzadas e Interactivas**
 
@@ -33,12 +33,16 @@ Este proyecto es una aplicación web desarrollada con Streamlit para el **análi
 
 • Elaboración de informes
 
+
+
 #### **Integración de Machine Learnning**
 • Detencción de anomalías
 
 • Segmentación de usuarios
 
 • Detección de bots
+
+
 
 #### **Métricas en Tiempo Real**
 • Usuarios únicos y total de requests
@@ -49,6 +53,8 @@ Este proyecto es una aplicación web desarrollada con Streamlit para el **análi
 
 • IP's sospechosas identificadas
 
+
+
 #### **Detección Inteligente**
 • Soporte para JSONs estructurados
 
@@ -57,6 +63,8 @@ Este proyecto es una aplicación web desarrollada con Streamlit para el **análi
 • Archivos CSV, TXT, LOG
 
 • Parseo automático de formatos comunes 
+
+
 
 #### Tecnologías
 
@@ -74,7 +82,7 @@ Este proyecto es una aplicación web desarrollada con Streamlit para el **análi
 
 ## **Uso del Dashboard**
 
-1. **Carga de datos**: 
+**1. Carga de datos**: 
 
       • Seleccionar el tipo de archivo que se desea analizar (JSON o Logs)
   
@@ -82,19 +90,19 @@ Este proyecto es una aplicación web desarrollada con Streamlit para el **análi
   
       • Configurar el formato específico si es necesario
   
-2. **Formatos Soportados**:
+**2. Formatos Soportados**:
 
     • **JSON**:
-        ```
-          [
-            {
-              "fecha": "25-02-2024 10:30:45AM",
-              "IP": "200.81.123.45",
-              "url": "/pagina-principal",
-              "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-            }
-          ]
-        ```
+      ```json
+        [
+          {
+            "fecha": "25-02-2024 10:30:45AM",
+            "IP": "200.81.123.45",
+            "url": "/pagina-principal",
+            "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+          }
+        ]
+      ```
         
     • **Logs Apache/NGINX**:
       ```
@@ -108,7 +116,7 @@ Este proyecto es una aplicación web desarrollada con Streamlit para el **análi
       ```
 
   
-3. **Análisis Disponibles**:
+**3. Análisis Disponibles**:
         
     • Usuarios únicos identificados
 
@@ -133,7 +141,7 @@ Este proyecto es una aplicación web desarrollada con Streamlit para el **análi
     • Análisis temporal: Patrones por día y hora
 
 
-4. **Elaboración de Informes**:
+**4. Elaboración de Informes**:
   
     • Informe de resultados (CSV)
         
@@ -181,33 +189,44 @@ Este proyecto es una aplicación web desarrollada con Streamlit para el **análi
             Generado automáticamente por el Dashboard de Análisis DGIPSE
           ```
 
-#### Configuraciones
+#### **Configuraciones**
+
   • Umbral de sensibilidad de anomalías
+
   • Número de clusters para segmentación
 
-### Soluciones de problemas
 
-#### **Error: "Missing required columns"**
+
+## **Soluciones de problemas**
+
+#### **• Error: "Missing required columns"**
   **Causa**: 
     Falta alguna columna requerida
     
   **Solución**:
     Asegurar que el archivo tenga: fecha, IP, url, user_agent
 
-#### **Error común: "attempt to get argmax of an empty sequence"**
+
+
+#### **• Error común: "attempt to get argmax of an empty sequence"**
   **Causa**: 
     Formato de fecha incorrecto en los logs
   
   **Solución**:
-    Verificar que el formato de fecha coincida con el esperado
+    Verificar que el formato de fecha coincida con el esperado.
     Usar el selector correcto de formato de log
 
-#### **Rendimiento lento con archivos grandes**
+
+
+#### **• Rendimiento lento con archivos grandes**
   **Solución**:
-    Dividir archivos muy grandes en lotes
+    Dividir archivos muy grandes en lotes 
     Usar muestreo para análisis exploratorio
 
-### **Agradecimientos**:
+
+
+
+## **Agradecimientos**:
   • Data Scientist y Profesor: Fernando Elías Mubarqui 
 
   • Equipo de DGIPSE - Dirección General de Informática y Procesamiento de Santiago del Estero
