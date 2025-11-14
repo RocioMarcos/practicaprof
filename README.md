@@ -16,6 +16,9 @@
 
 Este proyecto es una aplicación web desarrollada con Streamlit para el **análisis inteligente del tráfico web** del portal institucional del gobierno provincial de Santiago del Estero. Esta herramienta permite monitorear, analizar y visualizar patrones de tráfico web con capacidades avanzadas de machine learning para detección de anomalías y segmentación de usuarios.
 
+
+-------------------------------
+
 ### **Características Principales**
 
 #### **Visualizaciones Avanzadas e Interactivas**
@@ -55,7 +58,7 @@ Este proyecto es una aplicación web desarrollada con Streamlit para el **análi
 
 • Parseo automático de formatos comunes 
 
-#### Tecnologías Utilizadas
+#### Tecnologías
 
 | Tecnología | Versión | Propósito |
 |------------|---------|-----------|
@@ -65,6 +68,8 @@ Este proyecto es una aplicación web desarrollada con Streamlit para el **análi
 | Plotly | 5.15+ | Visualizaciones interactivas |
 | Scikit-learn | 1.3+ | Machine Learning |
 | NumPy | 1.24+ | Cálculos numéricos |
+
+-------------------------------
 
 
 ## **Uso del Dashboard**
@@ -79,7 +84,7 @@ Este proyecto es una aplicación web desarrollada con Streamlit para el **análi
   
 2. **Formatos Soportados**:
 
-      • **JSON**:
+    • **JSON**:
         ```
           [
             {
@@ -91,12 +96,12 @@ Este proyecto es una aplicación web desarrollada con Streamlit para el **análi
           ]
         ```
         
-      • **Logs Apache/NGINX**:
+    • **Logs Apache/NGINX**:
       ```
       192.168.1.100 - - [15/Oct/2023:10:23:45 -0500] "GET /index.html HTTP/1.1" 200 1234 "https://www.google.com" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
       ```
     
-      • **CSV**:
+    • **CSV**:
       ```
       fecha,IP,url,user_agent
       25-02-2024 10:30:45AM,200.81.123.45,/pagina-principal,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
@@ -105,32 +110,32 @@ Este proyecto es una aplicación web desarrollada con Streamlit para el **análi
   
 3. **Análisis Disponibles**:
         
-        • Usuarios únicos identificados
+    • Usuarios únicos identificados
 
-        • Total de requests procesados
-        
-        • Porcentaje de tráfico móvil
-        
-        • Anomalías detectadas
-        
-        • Tráfico por hora: Patrones horarios de acceso
-        
-        • Distribución geográfica: Origen del tráfico por países
-        
-        • Dispositivos y navegadores: Tecnologías utilizadas
-        
-        • Páginas más visitadas: Top 10 de contenido popular
-        
-        • Detección de anomalías: Comportamientos sospechosos
-        
-        • Segmentación de usuarios: Grupos por patrones de comportamiento
-        
-        • Análisis temporal: Patrones por día y hora
+    • Total de requests procesados
+    
+    • Porcentaje de tráfico móvil
+    
+    • Anomalías detectadas
+    
+    • Tráfico por hora: Patrones horarios de acceso
+    
+    • Distribución geográfica: Origen del tráfico por países
+    
+    • Dispositivos y navegadores: Tecnologías utilizadas
+    
+    • Páginas más visitadas: Top 10 de contenido popular
+    
+    • Detección de anomalías: Comportamientos sospechosos
+    
+    • Segmentación de usuarios: Grupos por patrones de comportamiento
+    
+    • Análisis temporal: Patrones por día y hora
 
 
 4. **Elaboración de Informes**:
   
-        • Informe de resultados (CSV)
+    • Informe de resultados (CSV)
         
           ```
           
@@ -138,7 +143,7 @@ Este proyecto es una aplicación web desarrollada con Streamlit para el **análi
         
           ```
         
-        • IP's sospechosas (CSV)
+    • IP's sospechosas (CSV)
 
           ```
           IP,total_requests,unique_pages,unique_hours,es_anomalia
@@ -146,7 +151,7 @@ Este proyecto es una aplicación web desarrollada con Streamlit para el **análi
           ```
         
         
-        • Reportes ejecutivos
+    • Reportes ejecutivos
 
           ```
           
@@ -183,24 +188,24 @@ Este proyecto es una aplicación web desarrollada con Streamlit para el **análi
 ### Soluciones de problemas
 
 #### **Error: "Missing required columns"**
-      **Causa**: 
-      Falta alguna columna requerida
-      
-      **Solución**:
-      Asegurar que el archivo tenga: fecha, IP, url, user_agent
+  **Causa**: 
+    Falta alguna columna requerida
+    
+  **Solución**:
+    Asegurar que el archivo tenga: fecha, IP, url, user_agent
 
 #### **Error común: "attempt to get argmax of an empty sequence"**
-      **Causa**: 
-      Formato de fecha incorrecto en los logs
-      
-      **Solución**:
-      Verificar que el formato de fecha coincida con el esperado
-      Usar el selector correcto de formato de log
+  **Causa**: 
+    Formato de fecha incorrecto en los logs
+  
+  **Solución**:
+    Verificar que el formato de fecha coincida con el esperado
+    Usar el selector correcto de formato de log
 
 #### **Rendimiento lento con archivos grandes**
-      **Solución**:
-      Dividir archivos muy grandes en lotes
-      Usar muestreo para análisis exploratorio
+  **Solución**:
+    Dividir archivos muy grandes en lotes
+    Usar muestreo para análisis exploratorio
 
 ### **Agradecimientos**:
   • Data Scientist y Profesor: Fernando Elías Mubarqui 
