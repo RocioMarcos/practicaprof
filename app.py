@@ -14,9 +14,9 @@ from sklearn.ensemble import IsolationForest
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 import warnings
+import re
+import io
 warnings.filterwarnings('ignore')
-
-
 
 
 # ==========================================================
@@ -52,7 +52,117 @@ def generate_executive_report(metricas, features, df_processed):
     """
     return report.encode('utf-8')
 
-# ==========================================================
+def parse_log_line(line):
+    """Parsea una línea de log en formato común (Apache/Nginx)"""
+    # Patrón para logs Apache/NGINX común
+    pattern = r'(\S+) - - \[(.*?)\] "(\S+) (\S+) \S+" (\d+) (\d+) "([^"]*)" "([^"]*)"'
+    match = re.match(pattern, line)
+    
+    if match:
+        ip = match.group(1)
+        timestamp = match.group(2)
+        method = match.group(3)
+        url = match.group(4)
+        status = match.group(5)
+        size = match.group(6)
+        referer = match.group(7)
+        user_agent = match.group(8)
+        
+        return {
+            'IP': ip,
+            'fecha': timestamp,
+            'url': url,
+            'user_agent': user_agent
+        }
+    return None
+
+def extract_browser(user_agent):
+    browsers = {
+        'Chrome': 'Chrome',
+        'Firefox': 'Firefox', 
+        'Safari': 'Safari',
+        'Edge': 'Edge',
+        'Opera': 'Opera'
+    }
+    for key, value in browsers.items():
+        if key in user_agent:
+            return value
+    return 'Otros'
+
+def extract_os(user_agent):
+    os_list = {
+        'Windows': 'Windows',
+        'Mac': 'Mac',
+        'Linux': 'Linux',
+        'Android': 'Android',
+        'iOS': 'iOS'
+    }
+    for key, value in os_list.items():
+        if key in user_agent:
+            return value
+    return 'Otros'
+
+def extract_device(user_agent):
+    mobile_indicators = ['Mobile', 'Android', 'iPhone', 'iPad']
+    if any(indicator in user_agent for indicator in mobile_indicators):
+        return 'Móvil'
+    return 'Desktop'
+
+def geolocate_ip(ip):
+    ip_ranges = {
+        '200.81': 'Argentina',
+        '190.': 'Chile',
+        '181.': 'Chile', 
+        '200.1': 'Brasil',
+        '186.': 'Colombia',
+        '200.32': 'Uruguay',
+        '200.3': 'Paraguay',
+        '192.168.': 'Red Local',
+        '203.0.113.': 'Ejemplo',
+        '198.51.100.': 'Ejemplo'
+    }
+    for prefix, country in ip_ranges.items():
+        if ip.startswith(prefix):
+            return country
+    return 'Otros Países'
+
+def preprocess_data(df, file_type, log_format):
+    """Preprocesa los datos según el tipo de archivo y formato"""
+    try:
+        if file_type == "JSON":
+            # Formato original para JSON
+            df['fecha'] = pd.to_datetime(df['fecha'], format='%d-%m-%Y %I:%M:%S%p', errors='coerce')
+        elif log_format == "Log Apache/NGINX":
+            # Formato para logs Apache
+            df['fecha'] = pd.to_datetime(df['fecha'], format='%d/%b/%Y:%H:%M:%S %z', errors='coerce')
+        else:
+            # Intentar formato genérico
+            df['fecha'] = pd.to_datetime(df['fecha'], errors='coerce')
+        
+        # Eliminar filas con fechas inválidas
+        initial_count = len(df)
+        df = df.dropna(subset=['fecha'])
+        if len(df) < initial_count:
+            st.warning(f"Se eliminaron {initial_count - len(df)} registros con fechas inválidas")
+        
+        # Resto del procesamiento
+        df['navegador'] = df['user_agent'].apply(extract_browser)
+        df['sistema_operativo'] = df['user_agent'].apply(extract_os)
+        df['dispositivo'] = df['user_agent'].apply(extract_device)
+        static_extensions = ['.css', '.js', '.jpg', '.jpeg', '.png', '.gif', '.ico', '.svg', '.woff', '.ttf']
+        df['es_estatico'] = df['url'].str.contains('|'.join(static_extensions), case=False, na=False)
+        df['pais'] = df['IP'].apply(geolocate_ip)
+        df['hora'] = df['fecha'].dt.hour
+        df['dia_semana'] = df['fecha'].dt.day_name()
+        df['mes'] = df['fecha'].dt.month_name()
+        
+        return df
+        
+    except Exception as e:
+        st.error(f"Error en preprocesamiento: {str(e)}")
+        return df
+
+#  ==========================================================
 # CONFIGURACIÓN INICIAL
 # ==========================================================
 st.set_page_config(
@@ -89,7 +199,7 @@ st.markdown("""
         background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
         border-left: 5px solid #ff6b6b;
     }
-    .section-header {
+        .section-header {
         font-size: 1.8rem;
         color: #2c3e50;
         margin: 2rem 0 1rem 0;
@@ -114,7 +224,7 @@ st.markdown("""
         font-weight: 600;
         transition: all 0.3s ease;
     }
-    .stButton button:hover {
+        .stButton button:hover {
         transform: translateY(-2px);
         box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
     }
@@ -173,86 +283,122 @@ with st.sidebar:
     """)
 
 # ==========================================================
-# CARGA DE DATOS
+# CARGA DE DATOS MULTIFORMATO
 # ==========================================================
 st.markdown("### 📁 Carga de Datos")
-uploaded_file = st.file_uploader(
-    "Subí tu archivo `datos.json` para comenzar el análisis", 
-    type=["json"], 
-    help="Archivo JSON con los logs de acceso web en el formato especificado"
+
+# Selector de tipo de archivo
+file_type = st.radio(
+    "Selecciona el tipo de archivo:",
+    ["JSON", "Logs (CSV/TXT/LOG)"],
+    horizontal=True,
+    help="Elige el formato de tu archivo de datos"
 )
 
+uploaded_file = None
+log_format = None
+
+if file_type == "JSON":
+    uploaded_file = st.file_uploader(
+        "Subí tu archivo `datos.json` para comenzar el análisis", 
+        type=["json"], 
+        help="Archivo JSON con los logs de acceso web en el formato especificado"
+    )
+else:  # Logs (CSV/TXT/LOG)
+    uploaded_file = st.file_uploader(
+        "Subí tu archivo de logs", 
+        type=["csv", "txt", "log"], 
+        help="Archivo de logs en formato CSV, TXT o LOG"
+    )
+    
+    if uploaded_file:
+        st.info("""
+        **Formatos soportados:**
+        - CSV con columnas: fecha, IP, url, user_agent
+        - Logs Apache/NGINX en formato común
+        - Archivos de texto con logs estructurados
+        """)
+        
+        # Opciones para archivos de log
+        log_format = st.selectbox(
+            "Formato del log:",
+            ["CSV con columnas", "Log Apache/NGINX", "Personalizado"],
+            help="Selecciona el formato de tu archivo de log"
+        )
+
 if uploaded_file:
-    df = pd.read_json(uploaded_file)
+    try:
+        with st.spinner('📥 Cargando y procesando archivo...'):
+            if file_type == "JSON":
+                df = pd.read_json(uploaded_file)
+                
+            else:  # Logs (CSV/TXT/LOG)
+                if log_format == "CSV con columnas":
+                    # Leer como CSV
+                    df = pd.read_csv(uploaded_file)
+                    # Verificar columnas mínimas requeridas
+                    required_columns = ['fecha', 'IP', 'url', 'user_agent']
+                    missing_columns = [col for col in required_columns if col not in df.columns]
+                    if missing_columns:
+                        st.error(f"❌ Faltan columnas requeridas: {missing_columns}")
+                        st.stop()
+                        
+                elif log_format == "Log Apache/NGINX":
+                    # Leer y parsear logs
+                    content = uploaded_file.getvalue().decode('utf-8')
+                    lines = content.split('\n')
+                    
+                    parsed_data = []
+                    for line in lines:
+                        if line.strip():  # Saltar líneas vacías
+                            parsed = parse_log_line(line)
+                            if parsed:
+                                parsed_data.append(parsed)
+                    
+                    if not parsed_data:
+                        st.error("❌ No se pudieron parsear los logs. Verifica el formato.")
+                        st.stop()
+                        
+                    df = pd.DataFrame(parsed_data)
+                    
+                else:  # Personalizado
+                    # Intentar detectar automáticamente el formato
+                    content = uploaded_file.getvalue().decode('utf-8')
+                    lines = content.split('\n')[:10]  # Primeras 10 líneas para análisis
+                    
+                    # Mostrar vista previa
+                    st.markdown("**Vista previa de las primeras líneas:**")
+                    for i, line in enumerate(lines[:5]):
+                        st.text(f"Línea {i+1}: {line[:100]}...")
+                    
+                    st.info("Para formato personalizado, asegúrate de que el archivo tenga las columnas: fecha, IP, url, user_agent")
+                    df = pd.read_csv(uploaded_file)
 
-    # ==========================================================
-    # FUNCIONES AUXILIARES
-    # ==========================================================
-    def extract_browser(user_agent):
-        browsers = {
-            'Chrome': 'Chrome',
-            'Firefox': 'Firefox', 
-            'Safari': 'Safari',
-            'Edge': 'Edge',
-            'Opera': 'Opera'
-        }
-        for key, value in browsers.items():
-            if key in user_agent:
-                return value
-        return 'Otros'
+        # Mostrar información del dataset cargado
+        st.success(f"✅ **{len(df):,} registros** cargados correctamente desde {uploaded_file.name}")
+        
+        # Mostrar vista previa de los datos
+        with st.expander("👁️ Vista previa de los datos crudos"):
+            st.dataframe(df.head(), use_container_width=True)
+            st.markdown(f"**Forma del dataset:** {df.shape[0]} filas × {df.shape[1]} columnas")
+            
+            if 'fecha' in df.columns:
+                st.markdown(f"**Rango de fechas:** {df['fecha'].min()} a {df['fecha'].max()}")
 
-    def extract_os(user_agent):
-        os_list = {
-            'Windows': 'Windows',
-            'Mac': 'Mac',
-            'Linux': 'Linux',
-            'Android': 'Android',
-            'iOS': 'iOS'
-        }
-        for key, value in os_list.items():
-            if key in user_agent:
-                return value
-        return 'Otros'
-
-    def extract_device(user_agent):
-        mobile_indicators = ['Mobile', 'Android', 'iPhone', 'iPad']
-        if any(indicator in user_agent for indicator in mobile_indicators):
-            return 'Móvil'
-        return 'Desktop'
-
-    def geolocate_ip(ip):
-        ip_ranges = {
-            '200.81': 'Argentina',
-            '190.': 'Chile',
-            '181.': 'Chile', 
-            '200.1': 'Brasil',
-            '186.': 'Colombia',
-            '200.32': 'Uruguay',
-            '200.3': 'Paraguay'
-        }
-        for prefix, country in ip_ranges.items():
-            if ip.startswith(prefix):
-                return country
-        return 'Otros Países'
-
-    def preprocess_data(df):
-        df['fecha'] = pd.to_datetime(df['fecha'], format='%d-%m-%Y %I:%M:%S%p', errors='coerce')
-        df['navegador'] = df['user_agent'].apply(extract_browser)
-        df['sistema_operativo'] = df['user_agent'].apply(extract_os)
-        df['dispositivo'] = df['user_agent'].apply(extract_device)
-        static_extensions = ['.css', '.js', '.jpg', '.jpeg', '.png', '.gif', '.ico', '.svg', '.woff', '.ttf']
-        df['es_estatico'] = df['url'].str.contains('|'.join(static_extensions), case=False, na=False)
-        df['pais'] = df['IP'].apply(geolocate_ip)
-        df['hora'] = df['fecha'].dt.hour
-        df['dia_semana'] = df['fecha'].dt.day_name()
-        df['mes'] = df['fecha'].dt.month_name()
-        return df
+    except Exception as e:
+        st.error(f"❌ Error al cargar el archivo: {str(e)}")
+        st.stop()
 
     # ==========================================================
     # PREPROCESAMIENTO
     # ==========================================================
     with st.spinner('🔄 Procesando datos y generando visualizaciones...'):
-        df_processed = preprocess_data(df.copy())
+        df_processed = preprocess_data(df.copy(), file_type, log_format)
+
+    # Verificar que tenemos datos después del preprocesamiento
+    if df_processed is None or len(df_processed) == 0:
+        st.error("❌ No hay datos válidos después del preprocesamiento. Verifica el formato de tu archivo.")
+        st.stop()
 
     st.success(f"✅ **{len(df_processed):,} registros** procesados correctamente")
 
@@ -263,26 +409,68 @@ if uploaded_file:
 
     # Cálculo de métricas
     features = df_processed.groupby('IP').agg({
-        'fecha': 'count',
-        'url': 'nunique',
-        'hora': 'nunique'
-    }).rename(columns={'fecha': 'total_requests', 'url': 'unique_pages', 'hora': 'unique_hours'})
-
+            'fecha': 'count',
+            'url': 'nunique',
+            'hora': 'nunique'
+        }).rename(columns={'fecha': 'total_requests', 'url': 'unique_pages', 'hora': 'unique_hours'})
     scaler = StandardScaler()
     features_scaled = scaler.fit_transform(features)
     iso_forest = IsolationForest(contamination=contamination_rate, random_state=42, n_estimators=100)
     anomalies = iso_forest.fit_predict(features_scaled)
     features['es_anomalia'] = np.where(anomalies == -1, 1, 0)
 
+    # Calcular métricas con valores por defecto
+    usuarios_unicos = df_processed['IP'].nunique()
+    total_requests = len(df_processed)
+    
+    # Manejar el caso donde no hay datos de dispositivo
+    try:
+        porcentaje_movil = (df_processed['dispositivo'] == 'Móvil').mean() * 100
+    except:
+        porcentaje_movil = 0
+    
+    try:
+        navegador_principal = df_processed['navegador'].mode()[0] if len(df_processed['navegador'].mode()) > 0 else 'N/A'
+    except:
+        navegador_principal = 'N/A'
+        
+    try:
+        pais_predominante = df_processed['pais'].mode()[0] if len(df_processed['pais'].mode()) > 0 else 'N/A'
+    except:
+        pais_predominante = 'N/A'
+        
+    try:
+        porcentaje_anomalias = features['es_anomalia'].mean() * 100
+    except:
+        porcentaje_anomalias = 0
+        
+    try:
+        ips_sospechosas = len(features[features['es_anomalia'] == 1])
+    except:
+        ips_sospechosas = 0
+
     metricas = {
-        'Usuarios únicos': df_processed['IP'].nunique(),
-        'Total de requests': len(df_processed),
-        '% Móvil': (df_processed['dispositivo'] == 'Móvil').mean() * 100,
-        'Navegador principal': df_processed['navegador'].mode()[0] if len(df_processed['navegador'].mode()) > 0 else 'N/A',
-        'País predominante': df_processed['pais'].mode()[0] if len(df_processed['pais'].mode()) > 0 else 'N/A',
-        '% Anomalías': features['es_anomalia'].mean() * 100,
-        'IPs sospechosas': len(features[features['es_anomalia'] == 1])
+        'Usuarios únicos': usuarios_unicos,
+        'Total de requests': total_requests,
+        '% Móvil': porcentaje_movil,
+        'Navegador principal': navegador_principal,
+        'País predominante': pais_predominante,
+        '% Anomalías': porcentaje_anomalias,
+        'IPs sospechosas': ips_sospechosas
     }
+    
+except Exception as e:
+    st.error(f"Error calculando métricas: {str(e)}")
+        # Métricas por defecto en caso de error
+    metricas = {
+            'Usuarios únicos': 0,
+            'Total de requests': 0,
+            '% Móvil': 0,
+            'Navegador principal': 'N/A',
+            'País predominante': 'N/A',
+            '% Anomalías': 0,
+            'IPs sospechosas': 0
+}
 
     # Mostrar métricas en columnas
     col1, col2, col3, col4 = st.columns(4)
@@ -385,7 +573,6 @@ if uploaded_file:
                 "#9ec5fe",  # azul claro
                 "#cfe2ff",  # azul muy claro
             ]
-            # color_discrete_sequence=px.colors.qualitative.Set3
         )
         
         fig_pie.update_layout(
@@ -542,7 +729,6 @@ if uploaded_file:
                 'unique_pages': 'Páginas Únicas Visitadas',
                 'es_anomalia': 'Es Anomalía'
             },
-            # title="Comportamiento de Usuarios vs Anomalías"
         )
         
         fig_anomalies.update_layout(
@@ -590,7 +776,6 @@ if uploaded_file:
                 'unique_pages': 'Páginas Únicas Visitadas',
                 'cluster': 'Grupo'
             },
-            # stitle=f"Segmentación en {n_clusters} Grupos de Comportamiento"
         )
         
         fig_clusters.update_layout(
@@ -822,31 +1007,53 @@ else:
         - **🌍 Análisis geográfico** del origen del tráfico
         - **📈 Optimización** de recursos basada en patrones de uso
         
+        ### Formatos de archivo soportados:
+        
+        **📄 JSON** - Estructura predefinida con logs de acceso
+        ```json
+        [
+          {
+            "fecha": "25-02-2024 10:30:45AM",
+            "IP": "200.81.123.45",
+            "url": "/pagina-principal", 
+            "user_agent": "Mozilla/5.0..."
+          }
+        ]
+        ```
+        
+        **📋 Logs (CSV/TXT/LOG)** - Formatos comunes de servidores web
+        - CSV con columnas: fecha, IP, url, user_agent
+        - Logs Apache/NGINX en formato común
+        - Archivos de texto con logs estructurados
+        
         ### Comenzar es muy fácil:
-        1. **Prepará** tu archivo `datos.json` con los logs de acceso
-        2. **Subí** el archivo usando el selector arriba
-        3. **Explorá** las visualizaciones interactivas
-        4. **Descargá** los reportes y datos procesados
+        1. **Seleccioná** el tipo de archivo arriba
+        2. **Subí** tu archivo usando el selector
+        3. **Configurá** el formato si es necesario
+        4. **Explorá** las visualizaciones interactivas
         """)
     
     with col_welcome2:
         st.markdown("""
         <div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 2rem; border-radius: 15px; color: white;'>
-        <h3 style='color: white; margin-top: 0;'>📁 Estructura del Archivo</h3>
-        <p>Tu archivo JSON debe contener:</p>
+        <h3 style='color: white; margin-top: 0;'>📁 Estructura Requerida</h3>
+        <p>Tu archivo debe contener estas columnas:</p>
         <ul style='color: white;'>
-            <li><strong>fecha:</strong> Timestamp</li>
-            <li><strong>IP:</strong> Dirección IP</li>
-            <li><strong>url:</strong> Página visitada</li>
+            <li><strong>fecha:</strong> Timestamp del acceso</li>
+            <li><strong>IP:</strong> Dirección IP del usuario</li>
+            <li><strong>url:</strong> Página o recurso accedido</li>
             <li><strong>user_agent:</strong> Navegador/Dispositivo</li>
         </ul>
+        <p style='margin-top: 1rem;'>💡 <strong>Tip:</strong> Los logs de Apache/NGINX se parsean automáticamente</p>
         </div>
         """, unsafe_allow_html=True)
     
     # Ejemplo de estructura de datos
-    with st.expander("Ejemplo de estructura de datos JSON", expanded=True):
-        st.json({
-            "datos": [
+    with st.expander("📋 Ejemplos de estructura de datos", expanded=True):
+        tab1, tab2, tab3 = st.tabs(["JSON", "CSV", "Log Apache"])
+        
+        with tab1:
+            st.json([
                 {
                     "fecha": "25-02-2024 10:30:45AM",
                     "IP": "200.81.123.45", 
@@ -859,5 +1066,21 @@ else:
                     "url": "/contacto", 
                     "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X)"
                 }
-            ]
-        })
+            ])
+        
+        with tab2:
+            st.markdown("""
+            ```csv
+            fecha,IP,url,user_agent
+            25-02-2024 10:30:45AM,200.81.123.45,/pagina-principal,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            25-02-2024 10:31:22AM,190.123.456.78,/contacto,"Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X)"
+            ```
+            """)
+        
+        with tab3:
+            st.markdown("""
+            ```log
+            200.81.123.45 - - [25/Feb/2024:10:30:45 -0300] "GET /pagina-principal HTTP/1.1" 200 1234 "https://www.ejemplo.com" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            190.123.456.78 - - [25/Feb/2024:10:31:22 -0300] "GET /contacto HTTP/1.1" 200 5678 "https://www.ejemplo.com" "Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X)"
+            ```
+            """)
