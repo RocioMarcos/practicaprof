@@ -1,18 +1,25 @@
 ## **Dashboard de Análisis de Tráfico Web - DGIPSE**
 
 #### **Equipo**
+
   • Gabriela Argañaráz
+  
   • Nelson Ramiro Castillo
+  
   • Mariam Rocio Marcos
+  
   • Mara Jorgelina Santillán
+  
   • Ivana Rocio Velázquez
 
 #### **Descripción**
+
 Este proyecto es una aplicación web desarrollada con Streamlit para el **análisis inteligente del tráfico web** del portal institucional del gobierno provincial de Santiago del Estero. Esta herramienta permite monitorear, analizar y visualizar patrones de tráfico web con capacidades avanzadas de machine learning para detección de anomalías y segmentación de usuarios.
 
 ### **Características Principales**
 
 #### **Visualizaciones Avanzadas e Interactivas**
+
 • Análisis temporal
 • Distribución geográfica
 • Segmentación por dispositivos
@@ -50,36 +57,41 @@ Este proyecto es una aplicación web desarrollada con Streamlit para el **análi
 ## **Uso del Dashboard**
 
 1. **Carga de datos**: 
+
   • Seleccionar el tipo de archivo que se desea analizar (JSON o Logs)
+  
   • Subir el archivo de datos
+  
   • Configurar el formato específico si es necesario
   
 2. **Formatos Soportados**:
-  • **JSON**:
-    ```
-      [
-        {
-          "fecha": "25-02-2024 10:30:45AM",
-          "IP": "200.81.123.45",
-          "url": "/pagina-principal",
-          "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-        }
-      ]
-    ```
-    
-  • **Logs Apache/NGINX**:
-  ```
-  192.168.1.100 - - [15/Oct/2023:10:23:45 -0500] "GET /index.html HTTP/1.1" 200 1234 "https://www.google.com" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-  ```
 
-  • **CSV**:
-  ```
-  fecha,IP,url,user_agent
-  25-02-2024 10:30:45AM,200.81.123.45,/pagina-principal,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-  ```
+      • **JSON**:
+        ```
+          [
+            {
+              "fecha": "25-02-2024 10:30:45AM",
+              "IP": "200.81.123.45",
+              "url": "/pagina-principal",
+              "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            }
+          ]
+        ```
+        
+      • **Logs Apache/NGINX**:
+      ```
+      192.168.1.100 - - [15/Oct/2023:10:23:45 -0500] "GET /index.html HTTP/1.1" 200 1234 "https://www.google.com" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+      ```
+    
+      • **CSV**:
+      ```
+      fecha,IP,url,user_agent
+      25-02-2024 10:30:45AM,200.81.123.45,/pagina-principal,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+      ```
 
   
 3. **Análisis Disponibles**:
+  
   • Usuarios únicos identificados
   • Total de requests procesados
   • Porcentaje de tráfico móvil
@@ -93,9 +105,11 @@ Este proyecto es una aplicación web desarrollada con Streamlit para el **análi
   • Análisis temporal: Patrones por día y hora
 
 4. **Elaboración de Informes**:
+  
   • Informe de resultados (CSV)
     ```
-        IP,http,host,url,dia,fecha,previo,user_agent,navegador,sistema_operativo,dispositivo,es_estatico,pais,hora,dia_semana,mes
+    
+    IP,http,host,url,dia,fecha,previo,user_agent,navegador,sistema_operativo,dispositivo,es_estatico,pais,hora,dia_semana,mes
   
     ```
   
@@ -108,6 +122,7 @@ Este proyecto es una aplicación web desarrollada con Streamlit para el **análi
   
   • Reportes ejecutivos
     ```
+    
       REPORTE EJECUTIVO - ANÁLISIS DE TRÁFICO DGIPSE
       Fecha de generación: 14/11/2025 11:30
       ===================================================
