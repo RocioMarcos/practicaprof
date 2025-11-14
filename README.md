@@ -10,11 +10,11 @@
 
 | Integrante | Rol |
 |------------|-----|
-| **Gabriela Argañaráz** | Desarrollo y Análisis |
-| **Nelson Ramiro Castillo** | Desarrollo y Machine Learning |
-| **Mariam Rocio Marcos** | Visualización de Datos |
-| **Mara Jorgelina Santillán** | Procesamiento de Datos |
-| **Ivana Rocio Velázquez** | Testing y Documentación |
+| **Gabriela Argañaráz** | Visualización de Datos |
+| **Nelson Ramiro Castillo** | Testing y Documentación |
+| **Mariam Rocio Marcos** | Desarrollo y Análisis |
+| **Mara Jorgelina Santillán** | Desarrollo y Machine Learning |
+| **Ivana Rocio Velázquez** | Desarrollo y Procesamiento de Datos |
 
 ---
 
