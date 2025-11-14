@@ -21,29 +21,42 @@ Este proyecto es una aplicación web desarrollada con Streamlit para el **análi
 #### **Visualizaciones Avanzadas e Interactivas**
 
 • Análisis temporal
+
 • Distribución geográfica
+
 • Segmentación por dispositivos
+
 • Análisis de navegadores
+
 • Elaboración de informes
 
 #### **Integración de Machine Learnning**
 • Detencción de anomalías
+
 • Segmentación de usuarios
+
 • Detección de bots
 
 #### **Métricas en Tiempo Real**
 • Usuarios únicos y total de requests
+
 • Porcentaje de tráfico movil
+
 • Tasa de anomalías detectadas
+
 • IP's sospechosas identificadas
 
 #### **Detección Inteligente**
 • Soporte para JSONs estructurados
+
 • Compatibilidad con logs de Apache/NGINX
+
 • Archivos CSV, TXT, LOG
+
 • Parseo automático de formatos comunes 
 
 #### Tecnologías Utilizadas
+
 | Tecnología | Versión | Propósito |
 |------------|---------|-----------|
 | Python | 3.8+ | Lenguaje principal |
@@ -58,11 +71,11 @@ Este proyecto es una aplicación web desarrollada con Streamlit para el **análi
 
 1. **Carga de datos**: 
 
-  • Seleccionar el tipo de archivo que se desea analizar (JSON o Logs)
+      • Seleccionar el tipo de archivo que se desea analizar (JSON o Logs)
   
-  • Subir el archivo de datos
+      • Subir el archivo de datos
   
-  • Configurar el formato específico si es necesario
+      • Configurar el formato específico si es necesario
   
 2. **Formatos Soportados**:
 
@@ -91,63 +104,77 @@ Este proyecto es una aplicación web desarrollada con Streamlit para el **análi
 
   
 3. **Análisis Disponibles**:
-  
-  • Usuarios únicos identificados
-  • Total de requests procesados
-  • Porcentaje de tráfico móvil
-  • Anomalías detectadas
-  • Tráfico por hora: Patrones horarios de acceso
-  • Distribución geográfica: Origen del tráfico por países
-  • Dispositivos y navegadores: Tecnologías utilizadas
-  • Páginas más visitadas: Top 10 de contenido popular
-  • Detección de anomalías: Comportamientos sospechosos
-  • Segmentación de usuarios: Grupos por patrones de comportamiento
-  • Análisis temporal: Patrones por día y hora
+        
+        • Usuarios únicos identificados
+
+        • Total de requests procesados
+        
+        • Porcentaje de tráfico móvil
+        
+        • Anomalías detectadas
+        
+        • Tráfico por hora: Patrones horarios de acceso
+        
+        • Distribución geográfica: Origen del tráfico por países
+        
+        • Dispositivos y navegadores: Tecnologías utilizadas
+        
+        • Páginas más visitadas: Top 10 de contenido popular
+        
+        • Detección de anomalías: Comportamientos sospechosos
+        
+        • Segmentación de usuarios: Grupos por patrones de comportamiento
+        
+        • Análisis temporal: Patrones por día y hora
+
 
 4. **Elaboración de Informes**:
   
-  • Informe de resultados (CSV)
-    ```
-    
-    IP,http,host,url,dia,fecha,previo,user_agent,navegador,sistema_operativo,dispositivo,es_estatico,pais,hora,dia_semana,mes
-  
-    ```
-  
-  • IP's sospechosas (CSV)
-  ```
-  IP,total_requests,unique_pages,unique_hours,es_anomalia
-  
-  ```
-  
-  
-  • Reportes ejecutivos
-    ```
-    
-      REPORTE EJECUTIVO - ANÁLISIS DE TRÁFICO DGIPSE
-      Fecha de generación: 14/11/2025 11:30
-      ===================================================
-      
-      RESUMEN EJECUTIVO:
-      - Total de requests analizados: 3,398
-      - Usuarios únicos identificados: 626
-      - Tráfico móvil: 19.8%
-      - Tasa de anomalías: 5.11%
-      
-      PRINCIPALES HALLAZGOS:
-      1. Seguridad: 32 IPs marcadas como sospechosas
-      2. Dispositivos: 19.8% del tráfico desde móviles
-      3. Geografía: Tráfico predominante desde Chile
-      4. Navegadores: Otros es el más utilizado
-      
-      RECOMENDACIONES PRIORITARIAS:
-      1. Implementar medidas de seguridad para IPs sospechosas
-      2. Optimizar experiencia mobile
-      3. Monitoreo continuo de patrones anómalos
-      4. Escalado de recursos en horarios pico
-      
-      ---
-      Generado automáticamente por el Dashboard de Análisis DGIPSE
-    ```
+        • Informe de resultados (CSV)
+        
+          ```
+          
+          IP,http,host,url,dia,fecha,previo,user_agent,navegador,sistema_operativo,dispositivo,es_estatico,pais,hora,dia_semana,mes
+        
+          ```
+        
+        • IP's sospechosas (CSV)
+
+          ```
+          IP,total_requests,unique_pages,unique_hours,es_anomalia
+          
+          ```
+        
+        
+        • Reportes ejecutivos
+
+          ```
+          
+            REPORTE EJECUTIVO - ANÁLISIS DE TRÁFICO DGIPSE
+            Fecha de generación: 14/11/2025 11:30
+            ===================================================
+            
+            RESUMEN EJECUTIVO:
+            - Total de requests analizados: 3,398
+            - Usuarios únicos identificados: 626
+            - Tráfico móvil: 19.8%
+            - Tasa de anomalías: 5.11%
+            
+            PRINCIPALES HALLAZGOS:
+            1. Seguridad: 32 IPs marcadas como sospechosas
+            2. Dispositivos: 19.8% del tráfico desde móviles
+            3. Geografía: Tráfico predominante desde Chile
+            4. Navegadores: Otros es el más utilizado
+            
+            RECOMENDACIONES PRIORITARIAS:
+            1. Implementar medidas de seguridad para IPs sospechosas
+            2. Optimizar experiencia mobile
+            3. Monitoreo continuo de patrones anómalos
+            4. Escalado de recursos en horarios pico
+            
+            ---
+            Generado automáticamente por el Dashboard de Análisis DGIPSE
+          ```
 
 #### Configuraciones
   • Umbral de sensibilidad de anomalías
@@ -156,30 +183,35 @@ Este proyecto es una aplicación web desarrollada con Streamlit para el **análi
 ### Soluciones de problemas
 
 #### **Error: "Missing required columns"**
-  **Causa**: 
-  Falta alguna columna requerida
-  
-  **Solución**:
-  Asegurar que el archivo tenga: fecha, IP, url, user_agent
+      **Causa**: 
+      Falta alguna columna requerida
+      
+      **Solución**:
+      Asegurar que el archivo tenga: fecha, IP, url, user_agent
 
 #### **Error común: "attempt to get argmax of an empty sequence"**
-  **Causa**: 
-  Formato de fecha incorrecto en los logs
-  
-  **Solución**:
-  Verificar que el formato de fecha coincida con el esperado
-  Usar el selector correcto de formato de log
+      **Causa**: 
+      Formato de fecha incorrecto en los logs
+      
+      **Solución**:
+      Verificar que el formato de fecha coincida con el esperado
+      Usar el selector correcto de formato de log
 
 #### **Rendimiento lento con archivos grandes**
-  **Solución**:
-  Dividir archivos muy grandes en lotes
-  Usar muestreo para análisis exploratorio
+      **Solución**:
+      Dividir archivos muy grandes en lotes
+      Usar muestreo para análisis exploratorio
 
 ### **Agradecimientos**:
   • Data Scientist y Profesor: Fernando Elías Mubarqui 
+
   • Equipo de DGIPSE - Dirección General de Informática y Procesamiento de Santiago del Estero
+
   • Comunidad de Streamlit por el excelente framework
+
   • Plotly por las visualizaciones interactivas
 
+
+--------------------------------------------
 
 Procesamiento: Python 3.8+
